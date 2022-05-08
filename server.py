@@ -82,7 +82,9 @@ import socket
 import threading
 import email
 import pprint
+import requests
 from io import StringIO
+from os.path import exists as file_exists
 
 
 PORT = 5050
@@ -107,12 +109,15 @@ def handle_client(conn, addr):
             msg_length = int(msg_length)
             msg = conn.recv(msg_length).decode(FORMAT)
             if msg == DISCONNECT_MESSAGE:
+                break
                 connected = False
             method_string, headers = parse_request(msg)
-            select_method(method_string)
+            response = select_method(method_string)
             print(f"[{addr}]")
-            conn.send("Msg received".encode(FORMAT))
+            print(msg)
+            conn.send(response.encode(FORMAT))
     conn.close()
+    print(f"[CONNECTION CLOSED]")
 
 
 def select_method(method_string):
@@ -120,14 +125,23 @@ def select_method(method_string):
     if method == "POST":
         pass
     elif method == "GET":
-        if url == '/':
-            pass
-
+        return get_request(url)
     else:
         pass
 
 
-def get_request()
+def get_request(url):
+    _, file = url.split("/", 1)
+    response = ""
+    if file_exists(file):
+        response += "HTTP/1.0 200 OK\r\n"
+        t = open(file, "r")
+        for v in t.readlines():
+            response += v
+    else:
+        response += "HTTP/1.0 404 Not Found\r\n"
+    return response
+
 
 def parse_request(request):
     # pop the first line so we only process headers
