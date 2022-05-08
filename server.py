@@ -85,6 +85,7 @@ import pprint
 import requests
 from io import StringIO
 from os.path import exists as file_exists
+import os
 
 
 PORT = 5050
@@ -110,8 +111,10 @@ def handle_client(conn, addr):
             msg = conn.recv(msg_length).decode(FORMAT)
             if msg == DISCONNECT_MESSAGE:
                 break
-                connected = False
+                # connected = False
             method_string, headers = parse_request(msg)
+            if headers["Connection"] == "close":  # Non-persistent
+                connected = False
             response = select_method(method_string)
             print(f"[{addr}]")
             print(msg)
@@ -123,16 +126,37 @@ def handle_client(conn, addr):
 def select_method(method_string):
     method, url, http_version = method_string.split(' ', 2)
     if method == "POST":
-        pass
+        return post_request(url)
     elif method == "GET":
         return get_request(url)
     else:
         pass
 
 
+def post_request(url):
+    _, file = url.split("/", 1)
+    file_name, extension = file.rsplit(".", 1)
+    response = ""
+    if file_exists(file):
+        response += "HTTP/1.0 200 OK\r\n"
+        read_file = open(file, "r")
+        post_file_name = file_name + "_POST." + extension
+        post_file = open(post_file_name, "w")
+        for line in read_file.readlines():
+            response += line
+            post_file.write(line)
+        read_file.close()
+        post_file.close()
+    else:
+        response += "HTTP/1.0 404 Not Found\r\n"
+    return response
+
+
 def get_request(url):
     _, file = url.split("/", 1)
     response = ""
+    # os.environ['NO_PROXY'] = '127.0.0.1'
+    # r = requests.get('http://localhost:5050/Server/test.txt')
     if file_exists(file):
         response += "HTTP/1.0 200 OK\r\n"
         t = open(file, "r")
