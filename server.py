@@ -80,6 +80,9 @@
 
 import socket
 import threading
+import email
+import pprint
+from io import StringIO
 
 
 PORT = 5050
@@ -105,9 +108,40 @@ def handle_client(conn, addr):
             msg = conn.recv(msg_length).decode(FORMAT)
             if msg == DISCONNECT_MESSAGE:
                 connected = False
-            print(f"[{addr}] {msg}")
+            method_string, headers = parse_request(msg)
+            select_method(method_string)
+            print(f"[{addr}]")
             conn.send("Msg received".encode(FORMAT))
     conn.close()
+
+
+def select_method(method_string):
+    method, url, http_version = method_string.split(' ', 2)
+    if method == "POST":
+        pass
+    elif method == "GET":
+        if url == '/':
+            pass
+
+    else:
+        pass
+
+
+def get_request()
+
+def parse_request(request):
+    # pop the first line so we only process headers
+    method, headers = request.split('\r\n', 1)
+
+    # construct a message from the request string
+    message = email.message_from_file(StringIO(headers))
+
+    # construct a dictionary containing the headers
+    headers = dict(message.items())
+
+    # pretty-print the dictionary of headers
+    # pprint.pprint(headers, width=160)
+    return method, headers
 
 
 def start():
