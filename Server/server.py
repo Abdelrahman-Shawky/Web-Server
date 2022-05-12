@@ -115,13 +115,16 @@ def handle_client(conn, addr):
         method_string, headers, body = parse_request(msg)
         # if headers["Connection"] is not None and headers["Connection"] == "close":  # Non-persistent
         #     connected = False
-        response = select_method(method_string, body)
+        response, http_version = select_method(method_string, body)
         print(f"[{addr}]")
         print(msg, "\n")
         # print(response)
         conn.send(response.encode(FORMAT))
-        connected = False
-        break
+        # connected = False
+        if http_version == 'HTTP/1.0':
+            break
+        elif http_version == 'HTTP/1.1':
+            pass
     conn.close()
     print(f"[CONNECTION CLOSED]")
 
@@ -169,7 +172,7 @@ def post_request(url, http_version, body):
     post_file.close()
 
     response = http_version + " 200 OK\r\n\r\n"
-    return response
+    return response, http_version
 
 
 def get_request(url, http_version):
@@ -185,7 +188,7 @@ def get_request(url, http_version):
         t.close()
     else:
         response += http_version + " 404 Not Found\r\n\r\n"
-    return response
+    return response, http_version
 
 
 def parse_request(request):
