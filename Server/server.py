@@ -109,8 +109,8 @@ def handle_client(conn, addr):
         # if msg_length:  # First empty message
         #     msg_length = int(msg_length)
         msg = conn.recv(2048).decode(FORMAT)
-        if msg == DISCONNECT_MESSAGE:
-            break
+        # if msg == DISCONNECT_MESSAGE:
+        #     break
             # connected = False
         method_string, headers, body = parse_request(msg)
         # if headers["Connection"] is not None and headers["Connection"] == "close":  # Non-persistent
@@ -118,8 +118,9 @@ def handle_client(conn, addr):
         response = select_method(method_string, body)
         print(f"[{addr}]")
         print(msg, "\n")
-        print(response)
+        # print(response)
         conn.send(response.encode(FORMAT))
+        connected = False
     conn.close()
     print(f"[CONNECTION CLOSED]")
 
@@ -150,14 +151,16 @@ def post_request(url, http_version, body):
     #     post_file.close()
     # else:
     #     response += http_version + " 404 Not Found\r\n"
-    body = body.split("\r\n")
+    # body = body.split("\r\n")
+    print("2", body)
     _, file = url.split("/", 1)
     file_name, extension = file.rsplit(".", 1)
     file_name += "_posted"
-    file = file_name + extension
+    file = file_name + "." +  extension
     post_file = open(file, "w")
-    for line in body:
-        post_file.write(line)
+    post_file.write(body)
+    # for line in body:
+    #     post_file.write(line)
     post_file.write("\r\n")
     post_file.close()
 
@@ -183,8 +186,14 @@ def get_request(url, http_version):
 
 def parse_request(request):
     # pop the first line so we only process headers
+    # body = ""
     header, body = request.split('\r\n\r\n', 1)
+    # request = request.split('\r\n\r\n', 1)
+    # print("dehk", request)
     method_string, headers = header.split('\r\n', 1)
+    # if len(request) == 2:
+    #     body = request[1]
+    print("1", body)
 
     # construct a message from the request string
     message = email.message_from_file(StringIO(headers))

@@ -118,7 +118,7 @@ client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 client.connect(ADDR)
 
 
-def send(msg):
+def send(method, msg):
     message = msg.encode(FORMAT)
     msg_length = len(message)
     send_length = str(msg_length).encode(FORMAT)
@@ -127,13 +127,14 @@ def send(msg):
     client.send(message)
     body = client.recv(8192).decode(FORMAT)
     _, contents = body.rsplit("\r\n", 1)
-    get_file = open(file_name[1:].replace('/', '.'), "w")
-    get_file.write(contents)
-    # for line in body:
-    #     get_file.write(line)
-    get_file.write("\r\n")
-    get_file.close()
-    print(body)
+    if method == "GET":
+        get_file = open(file_name[1:].replace('/', '.'), "w")
+        get_file.write(contents)
+        # for line in body:
+        #     get_file.write(line)
+        get_file.write("\r\n")
+        get_file.close()
+    # print(body)
     # print(client.recv(2048).decode(FORMAT))
 
 
@@ -143,12 +144,13 @@ if host_name == "localhost":
     # if method == "GET":
     if method == "POST":
         # request = method + " " + file_name + " " + "HTTP/1.0\r\n" + "HOST: " + host_name + ":" + PORT + "\r\n\r\n"
-        if file_exists(file_name):
-            t = open(file_name, "r")
+        if file_exists(file_name[1:]):
+            t = open(file_name[1:], "r")
             for v in t.readlines():
                 request += v
             t.close()
     request += "\r\n"
+    print(request)
 
 else:
     if method == "GET":
@@ -157,7 +159,7 @@ else:
         request = method + " / " + "HTTP/1.0\r\n" + "HOST: " + host_name + "\r\n\r\n"
 
 print(request)
-send(request)
+send(method, request)
 
 
 
