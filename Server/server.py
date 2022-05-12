@@ -121,6 +121,7 @@ def handle_client(conn, addr):
         # print(response)
         conn.send(response.encode(FORMAT))
         connected = False
+        break
     conn.close()
     print(f"[CONNECTION CLOSED]")
 
@@ -152,11 +153,14 @@ def post_request(url, http_version, body):
     # else:
     #     response += http_version + " 404 Not Found\r\n"
     # body = body.split("\r\n")
-    print("2", body)
+    # print("2", body)
     _, file = url.split("/", 1)
-    file_name, extension = file.rsplit(".", 1)
-    file_name += "_posted"
-    file = file_name + "." +  extension
+    if file != '':
+        file_name, extension = file.rsplit(".", 1)
+        file_name += "_posted"
+        file = file_name + "." + extension
+    else:
+        file = "mizo.txt"
     post_file = open(file, "w")
     post_file.write(body)
     # for line in body:
@@ -185,6 +189,7 @@ def get_request(url, http_version):
 
 
 def parse_request(request):
+    print(request)
     # pop the first line so we only process headers
     # body = ""
     header, body = request.split('\r\n\r\n', 1)

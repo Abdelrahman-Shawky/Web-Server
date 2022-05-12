@@ -114,8 +114,7 @@ else:
 # SERVER = "127.0.0.1"
 ADDR = (SERVER, int(PORT))
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client.connect(ADDR)
+
 
 
 def send(method, msg):
@@ -159,7 +158,10 @@ else:
         request = method + " / " + "HTTP/1.0\r\n" + "HOST: " + host_name + "\r\n\r\n"
 
 print(request)
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.connect(ADDR)
 send(method, request)
+client.close()
 
 
 
