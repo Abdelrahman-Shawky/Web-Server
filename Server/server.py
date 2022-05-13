@@ -31,8 +31,10 @@ def handle_client(conn, addr):
         #     msg_length = int(msg_length)
         # try:
         # server.settimeout(10)
-
-        msg = conn.recv(2048).decode(FORMAT)
+        try:
+            msg = conn.recv(2048).decode(FORMAT)
+        except:
+            break
         if len(msg) != 0:  # Avoid receiving empty msg
             # server.settimeout(None)
             # except socket.timeout:
@@ -54,7 +56,7 @@ def handle_client(conn, addr):
                 break
             elif http_version == 'HTTP/1.1':
                 pass
-    conn.close()
+    conn.shutdown()
     print(f"[CONNECTION CLOSED]")
 
 
@@ -148,6 +150,7 @@ def start():
     print(f"[LISTENING] Server is listening on {SERVER}")
     while True:
         conn, addr = server.accept()
+        conn.settimeout(10)
         thread = threading.Thread(target=handle_client, args=(conn, addr))
         thread.start()
         print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")

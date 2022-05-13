@@ -19,8 +19,9 @@ def send(method, msg, client, file_name):
     send_length += b' ' * (HEADER - len(send_length))
     # client.send(send_length)
     client.send(message)
-    print("I am sending.....")
+    print("1 - I am sending.....")
     body = client.recv(8192).decode(FORMAT)
+    print("2 - I am sending.....")
     response, contents = body.rsplit("\r\n\r\n", 1)
     if method == "GET" and "200 OK" in response:
         get_file = open(file_name[1:].replace('/', '.'), "w")
@@ -75,7 +76,7 @@ def start():
 
     try:
         send(method, request, client, file_name)
-    except socket.error:
+    except:
         client.connect(ADDR)
         print("new  connection.....")
         send(method, request, client, file_name)
