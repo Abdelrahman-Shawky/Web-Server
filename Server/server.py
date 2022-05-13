@@ -1,83 +1,3 @@
-# import socket
-#
-# HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
-# PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
-#
-# with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-#     s.bind((HOST, PORT))
-#     s.listen()
-#     conn, addr = s.accept()
-#     with conn:
-#         print(f"Connected by {addr}")
-#         while True:
-#             data = conn.recv(1024)
-#             if not data:
-#                 break
-#             conn.sendall(data)
-
-# multiconn-server.py
-
-# import sys
-# import socket
-# import selectors
-# import types
-#
-#
-# def accept_wrapper(sock):
-#     conn, addr = sock.accept()  # Should be ready to read
-#     print(f"Accepted connection from {addr}")
-#     conn.setblocking(False)
-#     data = types.SimpleNamespace(addr=addr, inb=b"", outb=b"")
-#     events = selectors.EVENT_READ | selectors.EVENT_WRITE
-#     sel.register(conn, events, data=data)
-#
-#
-# def service_connection(key, mask):
-#     sock = key.fileobj
-#     data = key.data
-#     if mask & selectors.EVENT_READ:
-#         recv_data = sock.recv(1024)  # Should be ready to read
-#         if recv_data:
-#             data.outb += recv_data
-#         else:
-#             print(f"Closing connection to {data.addr}")
-#             sel.unregister(sock)
-#             sock.close()
-#     if mask & selectors.EVENT_WRITE:
-#         if data.outb:
-#             print(f"Echoing {data.outb!r} to {data.addr}")
-#             sent = sock.send(data.outb)  # Should be ready to write
-#             data.outb = data.outb[sent:]
-#
-#
-# sel = selectors.DefaultSelector()
-#
-# # ...
-# # HOST = "127.0.0.1"  # Standard loopback interface address (localhost)
-# # PORT = 65432  # Port to listen on (non-privileged ports are > 1023)
-#
-# host, port = sys.argv[1], int(sys.argv[2])
-# lsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# lsock.bind((host, port))
-# lsock.listen()
-# print(f"Listening on {(host, port)}")
-# lsock.setblocking(False)
-# sel.register(lsock, selectors.EVENT_READ, data=None)
-#
-# try:
-#     while True:
-#         events = sel.select(timeout=None)
-#         for key, mask in events:
-#             if key.data is None:
-#                 accept_wrapper(key.fileobj)
-#             else:
-#                 service_connection(key, mask)
-# except KeyboardInterrupt:
-#     print("Caught keyboard interrupt, exiting")
-# finally:
-#     sel.close()
-
-
 import socket
 import threading
 import email
@@ -98,6 +18,7 @@ FORMAT = 'utf-8' # Decode format
 DISCONNECT_MESSAGE = "!DISCONNECT"
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# server.settimeout(10) # 10s of persistent connection
 server.bind(ADDR)
 
 
@@ -108,23 +29,31 @@ def handle_client(conn, addr):
         # msg_length = conn.recv(HEADER).decode(FORMAT)
         # if msg_length:  # First empty message
         #     msg_length = int(msg_length)
+        # try:
+        # server.settimeout(10)
+
         msg = conn.recv(2048).decode(FORMAT)
-        # if msg == DISCONNECT_MESSAGE:
-        #     break
+        if len(msg) != 0:  # Avoid receiving empty msg
+            # server.settimeout(None)
+            # except socket.timeout:
+            #     break
+
+            # if msg == DISCONNECT_MESSAGE:
+            #     break
+            #     connected = False
+            method_string, headers, body = parse_request(msg)
+            # if headers["Connection"] is not None and headers["Connection"] == "close":  # Non-persistent
+            #     connected = False
+            response, http_version = select_method(method_string, body)
+            print(f"[{addr}]")
+            print(msg, "\n")
+            # print(response)
+            conn.send(response.encode(FORMAT))
             # connected = False
-        method_string, headers, body = parse_request(msg)
-        # if headers["Connection"] is not None and headers["Connection"] == "close":  # Non-persistent
-        #     connected = False
-        response, http_version = select_method(method_string, body)
-        print(f"[{addr}]")
-        print(msg, "\n")
-        # print(response)
-        conn.send(response.encode(FORMAT))
-        # connected = False
-        if http_version == 'HTTP/1.0':
-            break
-        elif http_version == 'HTTP/1.1':
-            pass
+            if http_version == 'HTTP/1.0':
+                break
+            elif http_version == 'HTTP/1.1':
+                pass
     conn.close()
     print(f"[CONNECTION CLOSED]")
 
@@ -201,7 +130,7 @@ def parse_request(request):
     method_string, headers = header.split('\r\n', 1)
     # if len(request) == 2:
     #     body = request[1]
-    print("1", body)
+    # print("1", body)
 
     # construct a message from the request string
     message = email.message_from_file(StringIO(headers))
