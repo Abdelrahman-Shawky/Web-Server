@@ -16,19 +16,21 @@ client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 def send(method, msg, file_name):
 
     message = msg.encode(FORMAT)
-    client.send(message)
-    body = client.recv(8192).decode(FORMAT)
+    if message in cache:
+        print("Getting From Cache...")
+        body = cache[message]
+    else:
+        print("Sending Request...")
+        client.send(message)
+        body = client.recv(8192).decode(FORMAT)
+        cache[message] = body
     response, contents = body.rsplit("\r\n\r\n", 1)
     if method == "GET" and "200 OK" in response:
         get_file = open(file_name[1:].replace('/', '.'), "w")
         get_file.write(contents)
-        # for line in body:
-        #     get_file.write(line)
         get_file.write("\r\n")
         get_file.close()
-    print(response)
-    return True
-    # print(client.recv(2048).decode(FORMAT))
+    print(response, '\n')
 
 
 def start():
@@ -90,6 +92,7 @@ def reconnect():
         reconnect()
 
 
+cache = {}
 while True:
     print("Enter Request: ")
     request_input = input()
@@ -98,4 +101,5 @@ while True:
     start()
 
 # send(DISCONNECT_MESSAGE)
+print(cache)
 print("[CONNECTION CLOSED]")

@@ -16,6 +16,8 @@ ADDR = (SERVER, PORT)
 HEADER = 64  # Message default length
 FORMAT = 'utf-8' # Decode format
 DISCONNECT_MESSAGE = "!DISCONNECT"
+active_connections = 0
+
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -37,7 +39,7 @@ def handle_client(conn, addr):
             #     connected = False
             response, http_version = select_method(method_string, body)
             print(f"[{addr}]")
-            print(msg, "\n")
+            print(msg)
             conn.send(response.encode(FORMAT))
             if http_version == 'HTTP/1.0':
                 break
@@ -46,6 +48,9 @@ def handle_client(conn, addr):
     conn.shutdown(socket.SHUT_RDWR)
     conn.close()
     print(f"[CONNECTION CLOSED]")
+    global active_connections
+    active_connections -= 1
+    print(f"[ACTIVE CONNECTIONS] {active_connections}")
 
 
 def select_method(method_string, body):
@@ -68,8 +73,6 @@ def post_request(url, http_version, body):
         file = "mizo.txt"
     post_file = open(file, "w")
     post_file.write(body)
-    # for line in body:
-    #     post_file.write(line)
     post_file.write("\r\n")
     post_file.close()
 
@@ -92,7 +95,6 @@ def get_request(url, http_version):
 
 
 def parse_request(request):
-    print(request)
     # pop the first line so we only process headers
     header, body = request.split('\r\n\r\n', 1)
     method_string, headers = header.split('\r\n', 1)
@@ -111,10 +113,12 @@ def start():
         conn.settimeout(10)
         thread = threading.Thread(target=handle_client, args=(conn, addr))
         thread.start()
-        print(f"[ACTIVE CONNECTIONS] {threading.active_count() - 1}")
+        global active_connections
+        active_connections += 1
+        print(f"[ACTIVE CONNECTIONS] {active_connections}")
 
 
-print("[STARTING] server is starting...")
+print("[STARTING] Server is starting...")
 start()
 
 
