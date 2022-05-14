@@ -16,23 +16,8 @@ client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 def send(method, msg, file_name):
 
     message = msg.encode(FORMAT)
-    msg_length = len(message)
-    send_length = str(msg_length).encode(FORMAT)
-    send_length += b' ' * (HEADER - len(send_length))
-    # client.send(send_length)
     client.send(message)
     body = client.recv(8192).decode(FORMAT)
-
-    # try:
-    #     client.send(message)
-    # except:
-    #     return False
-    # print("1 - I am sending.....")
-    # try:
-    #     body = client.recv(8192).decode(FORMAT)
-    # except:
-    #     return False
-    # print("2 - I am sending.....")
     response, contents = body.rsplit("\r\n\r\n", 1)
     if method == "GET" and "200 OK" in response:
         get_file = open(file_name[1:].replace('/', '.'), "w")
@@ -47,8 +32,6 @@ def send(method, msg, file_name):
 
 
 def start():
-    # print("Enter Request: ")
-    # request_input = input()
     entries = request_input.split(' ')
     method = entries[0]
     file_name = entries[1]
@@ -82,51 +65,12 @@ def start():
         elif method == "POST":
             request = method + " / " + "HTTP/1.0\r\n" + "HOST: " + host_name + "\r\n\r\n"
     print(request)
-    # if still connected send, else connect again and send
-    # client.connect(ADDR)
-    # send(method, request,client, file_name)
-    # client.close()
-    # try:
-    #     client.connect(ADDR)
-    #     print('New Connection....')
-    #     send(method, request, file_name)
-    # except:
-    #     try:
-    #         send(method, request, file_name)
-    #     except:
-    #         global client
-    #         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #         send(method, request, file_name)
     try:
         send(method, request, file_name)
     except:
         connect()
         send(method, request, file_name)
 
-    # try:
-    #     send(method, request, file_name)
-    # except:
-    #     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    #     client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    #     client.connect(ADDR)
-    #     print("new connection....")
-    #     send(method, request, file_name)
-
-    # if not send(method, request, file_name):
-    #     client.connect(ADDR)
-    #     print("new connection....")
-    #     send(method, request, client, file_name)
-    # else:
-    #     send(method, request, client, file_name)
-
-    # try:
-    #     send(method, request, client, file_name)
-    # except:
-    #     client.connect(ADDR)
-    #     print("new  connection.....")
-    #     send(method, request, client, file_name)
-
-    # client.close()
 
 def connect():
     try:
