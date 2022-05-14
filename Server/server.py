@@ -18,6 +18,8 @@ FORMAT = 'utf-8' # Decode format
 DISCONNECT_MESSAGE = "!DISCONNECT"
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
 # server.settimeout(10) # 10s of persistent connection
 server.bind(ADDR)
 
@@ -56,7 +58,8 @@ def handle_client(conn, addr):
                 break
             elif http_version == 'HTTP/1.1':
                 pass
-    conn.shutdown()
+    conn.shutdown(socket.SHUT_RDWR)
+    conn.close()
     print(f"[CONNECTION CLOSED]")
 
 

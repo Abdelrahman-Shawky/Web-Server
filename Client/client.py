@@ -9,9 +9,11 @@ DISCONNECT_MESSAGE = "!DISCONNECT"
 # PORT = 5050
 # SERVER = socket.gethostbyname(socket.gethostname())
 # SERVER = "127.0.0.1"
+client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 
-def send(method, msg, client, file_name):
+def send(method, msg, file_name):
 
     message = msg.encode(FORMAT)
     msg_length = len(message)
@@ -19,9 +21,18 @@ def send(method, msg, client, file_name):
     send_length += b' ' * (HEADER - len(send_length))
     # client.send(send_length)
     client.send(message)
-    print("1 - I am sending.....")
     body = client.recv(8192).decode(FORMAT)
-    print("2 - I am sending.....")
+
+    # try:
+    #     client.send(message)
+    # except:
+    #     return False
+    # print("1 - I am sending.....")
+    # try:
+    #     body = client.recv(8192).decode(FORMAT)
+    # except:
+    #     return False
+    # print("2 - I am sending.....")
     response, contents = body.rsplit("\r\n\r\n", 1)
     if method == "GET" and "200 OK" in response:
         get_file = open(file_name[1:].replace('/', '.'), "w")
@@ -31,6 +42,7 @@ def send(method, msg, client, file_name):
         get_file.write("\r\n")
         get_file.close()
     print(response)
+    return True
     # print(client.recv(2048).decode(FORMAT))
 
 
@@ -49,6 +61,7 @@ def start():
         PORT = entries[3]
     else:
         PORT = 80
+    global ADDR
     ADDR = (SERVER, int(PORT))
 
     # send('GET /test.txt HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\nCache-Control: max-age=0\r\nUpgrade-Insecure-Requests: 1\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Encoding: gzip, deflate, sdch\r\nAccept-Language: en-US,en;q=0.8')
@@ -73,17 +86,66 @@ def start():
     # client.connect(ADDR)
     # send(method, request,client, file_name)
     # client.close()
-
+    # try:
+    #     client.connect(ADDR)
+    #     print('New Connection....')
+    #     send(method, request, file_name)
+    # except:
+    #     try:
+    #         send(method, request, file_name)
+    #     except:
+    #         global client
+    #         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #         send(method, request, file_name)
     try:
-        send(method, request, client, file_name)
+        send(method, request, file_name)
     except:
-        client.connect(ADDR)
-        print("new  connection.....")
-        send(method, request, client, file_name)
+        connect()
+        send(method, request, file_name)
+
+    # try:
+    #     send(method, request, file_name)
+    # except:
+    #     client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    #     client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    #     client.connect(ADDR)
+    #     print("new connection....")
+    #     send(method, request, file_name)
+
+    # if not send(method, request, file_name):
+    #     client.connect(ADDR)
+    #     print("new connection....")
+    #     send(method, request, client, file_name)
+    # else:
+    #     send(method, request, client, file_name)
+
+    # try:
+    #     send(method, request, client, file_name)
+    # except:
+    #     client.connect(ADDR)
+    #     print("new  connection.....")
+    #     send(method, request, client, file_name)
 
     # client.close()
 
-client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def connect():
+    try:
+        print("New Connection....")
+        client.connect(ADDR)
+    except:
+        reconnect()
+
+
+def reconnect():
+    try:
+        global client
+        print("New Connection.....")
+        client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        client.connect(ADDR)
+    except:
+        reconnect()
+
+
 while True:
     print("Enter Request: ")
     request_input = input()
