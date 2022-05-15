@@ -1,5 +1,7 @@
 import socket
 from os.path import exists as file_exists
+import threading
+import time
 # Threaded Client
 
 HEADER = 64
@@ -49,7 +51,7 @@ def start():
     global ADDR
     ADDR = (SERVER, int(PORT))
 
-    # send('GET /test.txt HTTP/1.1\r\nHost: localhost\r\nConnection: keep-alive\r\nCache-Control: max-age=0\r\nUpgrade-Insecure-Requests: 1\r\nUser-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36\r\nAccept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8\r\nAccept-Encoding: gzip, deflate, sdch\r\nAccept-Language: en-US,en;q=0.8')
+    request = ""
     if host_name == "localhost" or host_name == "192.168.56.1" or host_name == "127.0.0.1":
         request = method + " " + file_name + " " + "HTTP/1.1\r\n" + "HOST: " + host_name + ":" + PORT + "\r\n\r\n"
         # if method == "GET":
@@ -60,12 +62,18 @@ def start():
                 for v in t.readlines():
                     request += v
                 t.close()
-        request += "\r\n"
     else:
         if method == "GET":
             request = method + " " + file_name + " " + "HTTP/1.0\r\n" + "HOST: " + host_name + "\r\n\r\n"
         elif method == "POST":
             request = method + " / " + "HTTP/1.0\r\n" + "HOST: " + host_name + "\r\n\r\n"
+            if file_exists(file_name[1:]):
+                t = open(file_name[1:], "r")
+                for v in t.readlines():
+                    request += v
+                t.close()
+    request += "\r\n"
+
     print(request)
     try:
         send(method, request, file_name)
@@ -76,7 +84,7 @@ def start():
 
 def connect():
     try:
-        print("New Connection....")
+        print("New Connection...")
         client.connect(ADDR)
     except:
         reconnect()
@@ -85,7 +93,7 @@ def connect():
 def reconnect():
     try:
         global client
-        print("New Connection.....")
+        print("Reconnecting...")
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         client.connect(ADDR)
     except:
@@ -98,7 +106,10 @@ while True:
     request_input = input()
     if request_input == "Close":
         break
-    start()
+    thread = threading.Thread(target=start)
+    thread.start()
+    time.sleep(1)
+    # start()
 
 # send(DISCONNECT_MESSAGE)
 print(cache)

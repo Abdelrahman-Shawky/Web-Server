@@ -1,12 +1,13 @@
 import socket
 import threading
 import email
+from heapq import heapify, heappush, heappop
 import pprint
 import requests
 from io import StringIO
 from os.path import exists as file_exists
+import time
 import os
-
 
 PORT = 5050
 # SERVER = "127.0.0.1"
@@ -14,15 +15,37 @@ SERVER = socket.gethostbyname(socket.gethostname())
 # SERVER = "192.168.56.1"
 ADDR = (SERVER, PORT)
 HEADER = 64  # Message default length
-FORMAT = 'utf-8' # Decode format
+FORMAT = 'utf-8'  # Decode format
 DISCONNECT_MESSAGE = "!DISCONNECT"
 active_connections = 0
-
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 server.bind(ADDR)
+queue = []
+heap = []
+heapify(heap)
+
+
+def receive_message_thread(conn, addr):
+    connected = True
+    while connected:
+        try:
+            msg = conn.recv(2048).decode(FORMAT)
+        except:
+            break
+        if len(msg) != 0:  # Avoid receiving empty msg
+            method_string, headers, body = parse_request(msg)
+            # if headers["Connection"] is not None and headers["Connection"] == "close":  # Non-persistent
+            #     connected = False
+            response, http_version = select_method(method_string, body)
+            thread = threading.Thread(target=receive_message_thread, args=(conn, addr))
+            thread.start()
+            queue.append(response)
+            print(f"[{addr}]")
+            print(msg)
+            conn.send(response.encode(FORMAT))
 
 
 def handle_client(conn, addr):
@@ -38,19 +61,22 @@ def handle_client(conn, addr):
             # if headers["Connection"] is not None and headers["Connection"] == "close":  # Non-persistent
             #     connected = False
             response, http_version = select_method(method_string, body)
-            print(f"[{addr}]")
-            print(msg)
-            conn.send(response.encode(FORMAT))
-            if http_version == 'HTTP/1.0':
-                break
-            elif http_version == 'HTTP/1.1':
-                pass
-    conn.shutdown(socket.SHUT_RDWR)
-    conn.close()
-    print(f"[CONNECTION CLOSED]")
-    global active_connections
-    active_connections -= 1
-    print(f"[ACTIVE CONNECTIONS] {active_connections}")
+            if http_version == 'HTTP/1.1':
+                thread = threading.Thread(target=receive_message_thread, args=(conn, addr))
+                thread.start()
+            if threading.current_thread().name == "Main":
+                time.sleep(10)
+                print(f"[{addr}]")
+                print(msg)
+                conn.send(response.encode(FORMAT))
+                if http_version == 'HTTP/1.0':
+                    break
+    if threading.current_thread().name == "Main":
+        conn.close()
+        print(f"[CONNECTION CLOSED]")
+        global active_connections
+        active_connections -= 1
+        print(f"[ACTIVE CONNECTIONS] {active_connections}")
 
 
 def select_method(method_string, body):
@@ -110,8 +136,8 @@ def start():
     print(f"[LISTENING] Server is listening on {SERVER}")
     while True:
         conn, addr = server.accept()
-        conn.settimeout(10)
-        thread = threading.Thread(target=handle_client, args=(conn, addr))
+        conn.settimeout(20)
+        thread = threading.Thread(target=handle_client, name="Main", args=(conn, addr))
         thread.start()
         global active_connections
         active_connections += 1
@@ -120,10 +146,3 @@ def start():
 
 print("[STARTING] Server is starting...")
 start()
-
-
-
-
-
-
-
