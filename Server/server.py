@@ -39,11 +39,12 @@ def receive_message_thread(conn, addr):
     while connected:
         try:
             msg = conn.recv(2048).decode(FORMAT)
-            current_time = time.time()
-            time_dict[threading.current_thread().ident] = current_time
-            mutex.acquire()
-            heappush(heap, current_time)
-            mutex.release()
+            if len(msg) != 0:
+                current_time = time.time()
+                time_dict[threading.current_thread().ident] = current_time
+                mutex.acquire()
+                heappush(heap, current_time)
+                mutex.release()
         except:
             break
         if len(msg) != 0:  # Avoid receiving empty msg
@@ -82,8 +83,6 @@ def receive_message_thread(conn, addr):
 def handle_client(conn, addr):
     print(f"[NEW CONNECTION] {addr} connected")
     connected = True
-    global time_dict
-    global heap
     # myTime = time.time()
     while connected:
         try:
@@ -149,8 +148,6 @@ def handle_client(conn, addr):
                 # conn.close()
     if threading.current_thread().name == "Main":
         conn.close()
-        time_dict = {}
-        heap = []
         print(f"[CONNECTION CLOSED]")
         global active_connections
         active_connections -= 1
