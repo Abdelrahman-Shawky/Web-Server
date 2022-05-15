@@ -1,5 +1,6 @@
 import socket
 import threading
+from threading import Lock
 import email
 from heapq import heapify, heappush, heappop
 import pprint
@@ -7,6 +8,7 @@ import requests
 from io import StringIO
 from os.path import exists as file_exists
 import time
+
 import os
 
 PORT = 5050
@@ -26,13 +28,22 @@ server.bind(ADDR)
 queue = []
 heap = []
 heapify(heap)
+time_dict = {}
+mutex = Lock()
+print_mutex = Lock()
 
 
 def receive_message_thread(conn, addr):
     connected = True
+    conn.settimeout(30)
     while connected:
         try:
             msg = conn.recv(2048).decode(FORMAT)
+            current_time = time.time()
+            time_dict[threading.current_thread().ident] = current_time
+            mutex.acquire()
+            heappush(heap, current_time)
+            mutex.release()
         except:
             break
         if len(msg) != 0:  # Avoid receiving empty msg
@@ -40,20 +51,42 @@ def receive_message_thread(conn, addr):
             # if headers["Connection"] is not None and headers["Connection"] == "close":  # Non-persistent
             #     connected = False
             response, http_version = select_method(method_string, body)
+            # dict[msg] = response
             thread = threading.Thread(target=receive_message_thread, args=(conn, addr))
             thread.start()
-            queue.append(response)
-            print(f"[{addr}]")
-            print(msg)
+
+            def check():
+                mutex.acquire()
+                element = heappop(heap)
+                if time_dict[threading.current_thread().ident] != element:
+                    heappush(heap, element)
+                else:
+                    mutex.release()
+                    return True
+                mutex.release()
+                return False
+
+            while not check():
+                pass
+            print_mutex.acquire()
+            print(f"[{addr}]", threading.current_thread().ident, time_dict[threading.current_thread().ident], '\n', msg, response)
+            print_mutex.release()
+            # print(msg)
             conn.send(response.encode(FORMAT))
 
 
 def handle_client(conn, addr):
     print(f"[NEW CONNECTION] {addr} connected")
     connected = True
+    conn.settimeout(30)
     while connected:
         try:
             msg = conn.recv(2048).decode(FORMAT)
+            current_time = time.time()
+            time_dict[threading.current_thread().ident] = current_time
+            mutex.acquire()
+            heappush(heap, current_time)
+            mutex.release()
         except:
             break
         if len(msg) != 0:  # Avoid receiving empty msg
@@ -61,13 +94,30 @@ def handle_client(conn, addr):
             # if headers["Connection"] is not None and headers["Connection"] == "close":  # Non-persistent
             #     connected = False
             response, http_version = select_method(method_string, body)
+            # dict[msg] = response
             if http_version == 'HTTP/1.1':
                 thread = threading.Thread(target=receive_message_thread, args=(conn, addr))
                 thread.start()
             if threading.current_thread().name == "Main":
-                time.sleep(10)
-                print(f"[{addr}]")
-                print(msg)
+                time.sleep(15)
+
+                def check():
+                    mutex.acquire()
+                    element = heappop(heap)
+                    if time_dict[threading.current_thread().ident] != element:
+                        heappush(heap, element)
+                    else:
+                        mutex.release()
+                        return True
+                    mutex.release()
+                    return False
+
+                while not check():
+                    pass
+                print_mutex.acquire()
+                print(f"[{addr}]", threading.current_thread().ident, time_dict[threading.current_thread().ident], '\n', msg, response)
+                print_mutex.release()
+                # print(msg)
                 conn.send(response.encode(FORMAT))
                 if http_version == 'HTTP/1.0':
                     break
@@ -136,7 +186,6 @@ def start():
     print(f"[LISTENING] Server is listening on {SERVER}")
     while True:
         conn, addr = server.accept()
-        conn.settimeout(20)
         thread = threading.Thread(target=handle_client, name="Main", args=(conn, addr))
         thread.start()
         global active_connections

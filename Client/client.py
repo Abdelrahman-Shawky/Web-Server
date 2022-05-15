@@ -1,4 +1,5 @@
 import socket
+import sys
 from os.path import exists as file_exists
 import threading
 import time
@@ -7,6 +8,9 @@ import time
 HEADER = 64
 FORMAT = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
+input_file = sys.argv[1]
+# print(input_file)
+cache = {}
 
 # PORT = 5050
 # SERVER = socket.gethostbyname(socket.gethostname())
@@ -16,7 +20,7 @@ client.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 
 def send(method, msg, file_name):
-
+    # print(threading.current_thread().ident, file_name)
     message = msg.encode(FORMAT)
     if message in cache:
         print("Getting From Cache...")
@@ -32,13 +36,15 @@ def send(method, msg, file_name):
         get_file.write(contents)
         get_file.write("\r\n")
         get_file.close()
-    print(response, '\n')
+    print(message)
+    print(threading.current_thread().ident, file_name, '\n', response, '\n')
 
 
-def start():
+def start(request_input):
     entries = request_input.split(' ')
     method = entries[0]
     file_name = entries[1]
+    # print(threading.current_thread().ident, file_name)
     host_name = entries[2]
     if host_name == "localhost" or host_name == "192.168.56.1" or host_name == "127.0.0.1":
         SERVER = socket.gethostbyname(socket.gethostname())
@@ -64,9 +70,9 @@ def start():
                 t.close()
     else:
         if method == "GET":
-            request = method + " " + file_name + " " + "HTTP/1.0\r\n" + "HOST: " + host_name + "\r\n\r\n"
+            request = method + " " + file_name + " " + "HTTP/1.1\r\n" + "HOST: " + host_name + "\r\n\r\n"
         elif method == "POST":
-            request = method + " / " + "HTTP/1.0\r\n" + "HOST: " + host_name + "\r\n\r\n"
+            request = method + " / " + "HTTP/1.1\r\n" + "HOST: " + host_name + "\r\n\r\n"
             if file_exists(file_name[1:]):
                 t = open(file_name[1:], "r")
                 for v in t.readlines():
@@ -74,7 +80,7 @@ def start():
                 t.close()
     request += "\r\n"
 
-    print(request)
+    print(threading.current_thread().ident, file_name, '\n', request)
     try:
         send(method, request, file_name)
     except:
@@ -100,17 +106,25 @@ def reconnect():
         reconnect()
 
 
-cache = {}
-while True:
-    print("Enter Request: ")
-    request_input = input()
-    if request_input == "Close":
-        break
-    thread = threading.Thread(target=start)
-    thread.start()
-    time.sleep(1)
+# while True:
+# print("Enter Request: ")
+# request_input = input()
+if file_exists(input_file):
+    t = open(input_file, "r")
+    for line in t.readlines():
+        # print(line)
+        thread = threading.Thread(target=start, args=(line,))
+        thread.start()
+        # start(line)
+        time.sleep(1)
+    t.close()
+else:
+    print("Invalid Input File")
+    # if request_input == "Close":
+    #     break
+
     # start()
 
 # send(DISCONNECT_MESSAGE)
-print(cache)
-print("[CONNECTION CLOSED]")
+# print(cache)
+# print("[CONNECTION CLOSED]")
