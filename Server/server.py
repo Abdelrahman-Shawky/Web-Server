@@ -22,7 +22,7 @@ DISCONNECT_MESSAGE = "!DISCONNECT"
 active_connections = 0
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+# server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
 
 server.bind(ADDR)
 queue = []
@@ -35,7 +35,7 @@ print_mutex = Lock()
 
 def receive_message_thread(conn, addr):
     connected = True
-    conn.settimeout(30)
+    # conn.settimeout(30)
     while connected:
         try:
             msg = conn.recv(2048).decode(FORMAT)
@@ -63,6 +63,7 @@ def receive_message_thread(conn, addr):
                 else:
                     mutex.release()
                     return True
+                # heappush(heap, element)
                 mutex.release()
                 return False
 
@@ -73,23 +74,41 @@ def receive_message_thread(conn, addr):
             print_mutex.release()
             # print(msg)
             conn.send(response.encode(FORMAT))
+            # mutex.acquire()
+            # heappop(heap)
+            # mutex.release()
 
 
 def handle_client(conn, addr):
     print(f"[NEW CONNECTION] {addr} connected")
     connected = True
-    conn.settimeout(30)
+    global time_dict
+    global heap
+    # myTime = time.time()
     while connected:
         try:
+            # conn.settimeout(10)
             msg = conn.recv(2048).decode(FORMAT)
-            current_time = time.time()
-            time_dict[threading.current_thread().ident] = current_time
-            mutex.acquire()
-            heappush(heap, current_time)
-            mutex.release()
+            # print("mizo1")
+            if len(msg)==0:
+                # print("mizo2")
+                period = time.time()-current_time
+                # print(period)
+                if period > 10:
+                    # time_dict = {}
+                    # heap = []
+                    break
+            else:
+                # print("mizo3")
+                current_time = time.time()
+                time_dict[threading.current_thread().ident] = current_time
+                mutex.acquire()
+                heappush(heap, current_time)
+                mutex.release()
         except:
             break
         if len(msg) != 0:  # Avoid receiving empty msg
+            # print("mizo4")
             method_string, headers, body = parse_request(msg)
             # if headers["Connection"] is not None and headers["Connection"] == "close":  # Non-persistent
             #     connected = False
@@ -99,7 +118,8 @@ def handle_client(conn, addr):
                 thread = threading.Thread(target=receive_message_thread, args=(conn, addr))
                 thread.start()
             if threading.current_thread().name == "Main":
-                time.sleep(15)
+                # time.sleep(15)
+                # print("mizo5")
 
                 def check():
                     mutex.acquire()
@@ -109,20 +129,28 @@ def handle_client(conn, addr):
                     else:
                         mutex.release()
                         return True
+                    # heappush(heap, element)
                     mutex.release()
                     return False
 
                 while not check():
                     pass
+                # print("mizo6")
                 print_mutex.acquire()
                 print(f"[{addr}]", threading.current_thread().ident, time_dict[threading.current_thread().ident], '\n', msg, response)
                 print_mutex.release()
                 # print(msg)
                 conn.send(response.encode(FORMAT))
+                # mutex.acquire()
+                # heappop(heap)
+                # mutex.release()
                 if http_version == 'HTTP/1.0':
                     break
+                # conn.close()
     if threading.current_thread().name == "Main":
         conn.close()
+        time_dict = {}
+        heap = []
         print(f"[CONNECTION CLOSED]")
         global active_connections
         active_connections -= 1
@@ -186,6 +214,12 @@ def start():
     print(f"[LISTENING] Server is listening on {SERVER}")
     while True:
         conn, addr = server.accept()
+        # conn.settimeout(10)
+        # conn.setsockopt(socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+        # conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPIDLE, 1)
+        # conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPINTVL, 3)
+        # conn.setsockopt(socket.IPPROTO_TCP, socket.TCP_KEEPCNT,5)
+        # conn.setblocking(0)
         thread = threading.Thread(target=handle_client, name="Main", args=(conn, addr))
         thread.start()
         global active_connections

@@ -4,3 +4,9 @@ GET /test3.txt localhost 5050
 POST /ptest.txt localhost 5050
 POST /ptest2.txt localhost 5050
 POST /ptest3.txt localhost 5050
+GET /test.txt 127.0.0.1 5050
+GET /test2.txt 192.168.56.1 5050
+GET /test3.txt localhost 5050
+POST /ptest.txt localhost 5050
+POST /ptest2.txt localhost 5050
+POST /ptest3.txt localhost 5050

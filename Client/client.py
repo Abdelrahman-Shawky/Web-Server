@@ -1,6 +1,7 @@
 import socket
 import sys
 from os.path import exists as file_exists
+from threading import Lock
 import threading
 import time
 # Threaded Client
@@ -11,6 +12,7 @@ DISCONNECT_MESSAGE = "!DISCONNECT"
 input_file = sys.argv[1]
 # print(input_file)
 cache = {}
+print_mutex = Lock()
 
 # PORT = 5050
 # SERVER = socket.gethostbyname(socket.gethostname())
@@ -36,8 +38,10 @@ def send(method, msg, file_name):
         get_file.write(contents)
         get_file.write("\r\n")
         get_file.close()
+    print_mutex.acquire()
     print(message)
-    print(threading.current_thread().ident, file_name, '\n', response, '\n')
+    print(file_name, '\n', response, '\n')
+    print_mutex.release()
 
 
 def start(request_input):
@@ -54,8 +58,12 @@ def start(request_input):
         PORT = entries[3]
     else:
         PORT = 80
-    global ADDR
+    # global ADDR
+    # local_st = threading.local()
+    # local_st.myADDR = (SERVER, int(PORT))
+    # ADDR = local_st.myADDR
     ADDR = (SERVER, int(PORT))
+    # print(ADDR)
 
     request = ""
     if host_name == "localhost" or host_name == "192.168.56.1" or host_name == "127.0.0.1":
@@ -70,40 +78,46 @@ def start(request_input):
                 t.close()
     else:
         if method == "GET":
-            request = method + " " + file_name + " " + "HTTP/1.1\r\n" + "HOST: " + host_name + "\r\n\r\n"
+            request = method + " " + file_name + " " + "HTTP/1.0\r\n" + "HOST: " + host_name + "\r\n\r\n"
         elif method == "POST":
-            request = method + " / " + "HTTP/1.1\r\n" + "HOST: " + host_name + "\r\n\r\n"
+            request = method + " / " + "HTTP/1.0\r\n" + "HOST: " + host_name + "\r\n\r\n"
             if file_exists(file_name[1:]):
                 t = open(file_name[1:], "r")
                 for v in t.readlines():
                     request += v
                 t.close()
     request += "\r\n"
-
-    print(threading.current_thread().ident, file_name, '\n', request)
+    print_mutex.acquire()
+    print(file_name, '\n', request)
+    print_mutex.release()
     try:
+        try:
+            client.connect(ADDR)
+            print(ADDR)
+        except:
+            pass
         send(method, request, file_name)
     except:
-        connect()
+        connect(ADDR)
         send(method, request, file_name)
 
 
-def connect():
+def connect(myADDR):
     try:
         print("New Connection...")
-        client.connect(ADDR)
+        client.connect(myADDR)
     except:
-        reconnect()
+        reconnect(myADDR)
 
 
-def reconnect():
+def reconnect(myADDR):
     try:
         global client
         print("Reconnecting...")
         client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        client.connect(ADDR)
+        client.connect(myADDR)
     except:
-        reconnect()
+        reconnect(myADDR)
 
 
 # while True:
@@ -113,6 +127,8 @@ if file_exists(input_file):
     t = open(input_file, "r")
     for line in t.readlines():
         # print(line)
+        # entries = line.split(' ')
+        # host_name = entries[2]
         thread = threading.Thread(target=start, args=(line,))
         thread.start()
         # start(line)
